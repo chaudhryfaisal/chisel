@@ -157,6 +157,9 @@ $ chisel server --help
 
     --reverse, Allow clients to specify reverse port forwarding remotes
     in addition to normal remotes.
+    
+    --reverse-random-port-when-used, Generate random port for reverse 
+	when specified port is in use.
 
     --tls-key, Enables TLS and provides optional path to a PEM-encoded
     TLS private key. When this flag is set, you must also set --tls-cert,

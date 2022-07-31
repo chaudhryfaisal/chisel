@@ -1,7 +1,9 @@
 package chserver
 
 import (
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -128,8 +130,19 @@ func (s *Server) handleWebsocket(w http.ResponseWriter, req *http.Request) {
 		}
 		//confirm reverse tunnel is available
 		if r.Reverse && !r.CanListen() {
-			failed(s.Errorf("Server cannot listen on %s", r.String()))
-			return
+			if s.config.ReverseRandomPortWhenUsed {
+				l.Debugf("generating random port as %s is used", r.String())
+				freePort, err := GetFreePort()
+				if err != nil {
+					failed(s.Errorf("failed to generate random port when used %s", r.String()))
+					return
+				}
+				l.Debugf("generated random port as %s is used freePort=%d", r.String(), freePort)
+				r.LocalPort = strconv.Itoa(freePort)
+			} else {
+				failed(s.Errorf("Server cannot listen on %s", r.String()))
+				return
+			}
 		}
 	}
 	//successfuly validated config!
@@ -163,4 +176,19 @@ func (s *Server) handleWebsocket(w http.ResponseWriter, req *http.Request) {
 	} else {
 		l.Debugf("Closed connection")
 	}
+}
+
+// GetFreePort get next open port
+func GetFreePort() (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port, nil
 }
